@@ -1,0 +1,17 @@
+{
+  "name": "paseo-plugin-basic-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test server/checkpoint.test.ts"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.8.0",
+    "@getpaseo/protocol": "0.8.0",
+    "@types/node": "^22.20.2",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
+  }
+}
