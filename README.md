@@ -194,6 +194,15 @@ npm run build:server
 npm run typecheck
 ```
 
+### Test verification hook (machine-local setup)
+
+A global Claude Code Stop hook verifies tests when a coding session ends. It is machine setup, not part of this repo: the script is `~/.claude/hooks/verify-tests.sh`, registered in `~/.claude/settings.json`. When a session stops with uncommitted changes, the hook runs the project's test command and blocks the stop when the run fails.
+
+Behavior:
+
+- Self-provisioning: when the test command reports a missing binary (exit 127), the hook runs `npm install` once and retries. A fresh worktree needs no manual install.
+- This repo is skipped: its `CLAUDE.md` forbids running the full test suite locally, and the hook exits quietly in repos that say so. Full-suite verification happens in CI ([docs/testing.md](docs/testing.md)).
+
 ## Related projects
 
 - [getpaseo/paseo-relay](https://github.com/getpaseo/paseo-relay) — official distributed relay, written in Elixir
