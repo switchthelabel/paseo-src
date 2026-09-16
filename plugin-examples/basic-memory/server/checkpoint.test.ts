@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { AgentTimelineItem } from "@getpaseo/protocol/agent-types";
 import { clamp, composeNote, createTurnCoalescer, type CheckpointDraft } from "./checkpoint.ts";
 import { latestOutputText, latestUserText } from "./inspect.ts";
+import { preapprovalsFor } from "./inject.ts";
 import { permalinkFromToolText } from "./mcp-client.ts";
 import { redact } from "./redact.ts";
 
@@ -163,6 +164,25 @@ test("permalinkFromToolText reads the permalink from a JSON tool result", () => 
   assert.equal(permalinkFromToolText("not json"), null);
 });
 
+test("preapprovalsFor returns grants only for providers that support them", () => {
+  const config = testConfig();
+  const claudeGrants = preapprovalsFor("claude", config);
+  assert.equal(claudeGrants.length, 7);
+  assert.deepEqual(claudeGrants[0], { kind: "mcp", server: "basic-memory", tool: "search_notes" });
+
+  // Providers without exact preapproval support must get no toolPolicy:
+  // the daemon rejects agent creation for them otherwise.
+  assert.deepEqual(preapprovalsFor("glm-acp-agent", config), []);
+  assert.deepEqual(preapprovalsFor("gemini", config), []);
+
+  // A listed custom provider extending a supported harness still gets grants.
+  const extended = { ...config, preapproveProviders: [...config.preapproveProviders, "zai"] };
+  assert.equal(preapprovalsFor("zai", extended).length, 7);
+
+  // The master switch wins over the provider list.
+  assert.deepEqual(preapprovalsFor("claude", { ...config, preapproveTools: false }), []);
+});
+
 function testConfig() {
   return {
     binaryPath: "/basic-memory",
@@ -172,6 +192,7 @@ function testConfig() {
     injectMcp: true,
     excludeProviders: [],
     preapproveTools: true,
+    preapproveProviders: ["claude", "codex", "opencode"],
     checkpoints: true,
     skipSubagents: false,
     quietMs: 60_000,

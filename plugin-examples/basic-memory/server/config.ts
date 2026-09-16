@@ -10,6 +10,7 @@ export interface PluginConfig {
   injectMcp: boolean;
   excludeProviders: string[];
   preapproveTools: boolean;
+  preapproveProviders: string[];
   checkpoints: boolean;
   skipSubagents: boolean;
   quietMs: number;
@@ -28,6 +29,10 @@ const DEFAULTS: PluginConfig = {
   injectMcp: true,
   excludeProviders: [],
   preapproveTools: true,
+  // The daemon rejects a toolPolicy on providers whose contract cannot honor
+  // exact MCP tool preapproval — only these three can (custom providers that
+  // `extends` one of them inherit it; add their ids here to cover them).
+  preapproveProviders: ["claude", "codex", "opencode"],
   checkpoints: true,
   skipSubagents: false,
   quietMs: 60_000,

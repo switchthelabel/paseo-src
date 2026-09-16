@@ -37,21 +37,22 @@ memory.
 first run. Edit the file to change behavior; the plugin reads it on every
 turn, so changes apply without a reload.
 
-| Key                | Default                                | Meaning                                                    |
-| ------------------ | -------------------------------------- | ---------------------------------------------------------- |
-| `binaryPath`       | `/home/ubuntu/.local/bin/basic-memory` | Basic Memory binary                                        |
-| `vaultPath`        | `/home/ubuntu/paseo-memory`            | Vault directory, used to confirm each write landed on disk |
-| `project`          | `paseo-shared`                         | Basic Memory project name passed to `mcp --project`        |
-| `serverName`       | `basic-memory`                         | Name of the injected MCP server                            |
-| `injectMcp`        | `true`                                 | Inject the MCP server into new agents                      |
-| `excludeProviders` | `[]`                                   | Provider IDs that must not get the injection               |
-| `preapproveTools`  | `true`                                 | Preapprove the read and write tools                        |
-| `checkpoints`      | `true`                                 | Write turn-end checkpoint notes                            |
-| `skipSubagents`    | `false`                                | Do not checkpoint subagents                                |
-| `quietMs`          | `60000`                                | Debounce window; turn ends within it merge into one note   |
-| `maxUserChars`     | `1000`                                 | Truncation limit for the request section                   |
-| `maxOutputChars`   | `4000`                                 | Truncation limit for the result section                    |
-| `folder`           | `checkpoints`                          | Vault folder for notes                                     |
+| Key                   | Default                                | Meaning                                                    |
+| --------------------- | -------------------------------------- | ---------------------------------------------------------- |
+| `binaryPath`          | `/home/ubuntu/.local/bin/basic-memory` | Basic Memory binary                                        |
+| `vaultPath`           | `/home/ubuntu/paseo-memory`            | Vault directory, used to confirm each write landed on disk |
+| `project`             | `paseo-shared`                         | Basic Memory project name passed to `mcp --project`        |
+| `serverName`          | `basic-memory`                         | Name of the injected MCP server                            |
+| `injectMcp`           | `true`                                 | Inject the MCP server into new agents                      |
+| `excludeProviders`    | `[]`                                   | Provider IDs that must not get the injection               |
+| `preapproveTools`     | `true`                                 | Preapprove the read and write tools                        |
+| `preapproveProviders` | `["claude", "codex", "opencode"]`      | Providers that may receive preapproval grants              |
+| `checkpoints`         | `true`                                 | Write turn-end checkpoint notes                            |
+| `skipSubagents`       | `false`                                | Do not checkpoint subagents                                |
+| `quietMs`             | `60000`                                | Debounce window; turn ends within it merge into one note   |
+| `maxUserChars`        | `1000`                                 | Truncation limit for the request section                   |
+| `maxOutputChars`      | `4000`                                 | Truncation limit for the result section                    |
+| `folder`              | `checkpoints`                          | Vault folder for notes                                     |
 
 ## What a checkpoint contains
 
@@ -112,6 +113,13 @@ still counts as done for the same reason.
 - Injection is new-agents-only. Agents created before the plugin was enabled
   keep their saved configuration and get no server. That is also the rollback
   property: disable the plugin and new agents are clean.
+- Only providers whose contract supports exact MCP tool preapproval (Claude,
+  Codex, OpenCode, and custom providers that extend them) receive the
+  preapproval grants. The daemon rejects agent creation when any other
+  provider gets a `toolPolicy`, so every other provider gets the MCP server
+  without preapproval and its harness prompts for the tools as usual. Add a
+  custom provider id to `preapproveProviders` when it extends a supported
+  harness.
 - The vault is host-local. Agents on other daemon hosts do not see it.
 - Search quality depends on Basic Memory's index; `basic-memory doctor`
   checks it.
