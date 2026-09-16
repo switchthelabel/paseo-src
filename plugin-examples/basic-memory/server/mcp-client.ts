@@ -24,6 +24,11 @@ interface ToolCall {
   error: string | null;
 }
 
+interface ToolCallHandle {
+  call: ToolCall;
+  dispose: () => void;
+}
+
 const CALL_TIMEOUT_MS = 30_000;
 const FILE_WAIT_TIMEOUT_MS = 8_000;
 const FILE_POLL_MS = 250;
@@ -33,7 +38,7 @@ const MAX_STDOUT_BYTES = 4 * 1024 * 1024;
 // checkpoint writes are minutes apart, so a persistent connection costs more
 // than it saves.
 export async function writeNote(note: NoteDraft, config: PluginConfig): Promise<McpCallResult> {
-  const call = await callTool(
+  const { call, dispose } = await callTool(
     "write_note",
     {
       title: note.title,
@@ -44,8 +49,12 @@ export async function writeNote(note: NoteDraft, config: PluginConfig): Promise<
     },
     config,
   );
-  if (call.ok && call.filePath !== null) {
-    await waitForFile(join(config.vaultPath, call.filePath));
+  try {
+    if (call.ok && call.filePath !== null) {
+      await waitForFile(join(config.vaultPath, call.filePath));
+    }
+  } finally {
+    dispose();
   }
   return { ok: call.ok, permalink: call.permalink, error: call.error };
 }
@@ -68,7 +77,7 @@ function callTool(
   name: string,
   args: Record<string, unknown>,
   config: PluginConfig,
-): Promise<ToolCall> {
+): Promise<ToolCallHandle> {
   const child = spawn(config.binaryPath, ["mcp", "--project", config.project], {
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -76,28 +85,41 @@ function callTool(
   let stdoutBytes = 0;
   let stderrTail = "";
   let settled = false;
-  let resolveCall: (call: ToolCall) => void;
-  const promise = new Promise<ToolCall>((resolve) => {
+  let resolveCall: (handle: ToolCallHandle) => void;
+  const promise = new Promise<ToolCallHandle>((resolve) => {
     resolveCall = resolve;
   });
 
+  function dispose(): void {
+    child.kill();
+  }
+
   const timer = setTimeout(() => {
-    finish({
-      ok: false,
-      permalink: null,
-      filePath: null,
-      error: `basic-memory mcp did not answer within ${CALL_TIMEOUT_MS / 1000}s`,
-    });
+    finish(
+      {
+        ok: false,
+        permalink: null,
+        filePath: null,
+        error: `basic-memory mcp did not answer within ${CALL_TIMEOUT_MS / 1000}s`,
+      },
+      false,
+    );
   }, CALL_TIMEOUT_MS);
 
-  function finish(call: ToolCall): void {
+  // On success the child stays alive: basic-memory flushes the markdown file
+  // from a background task of the running process, so the caller must keep it
+  // alive while polling for the file and call `dispose` afterwards. Failures
+  // kill it here.
+  function finish(call: ToolCall, keepAlive: boolean): void {
     if (settled) {
       return;
     }
     settled = true;
     clearTimeout(timer);
-    child.kill();
-    resolveCall(call);
+    if (!keepAlive) {
+      dispose();
+    }
+    resolveCall({ call, dispose });
   }
 
   function send(message: unknown): void {
@@ -115,7 +137,8 @@ function callTool(
       return;
     }
     if (record.id === 2) {
-      finish(readToolResult(record, stderrTail));
+      const call = readToolResult(record, stderrTail);
+      finish(call, call.ok);
     }
   }
 
@@ -124,16 +147,22 @@ function callTool(
   child.stdin.on("error", () => undefined);
 
   child.on("error", (err) => {
-    finish({ ok: false, permalink: null, filePath: null, error: `spawn failed: ${err.message}` });
+    finish(
+      { ok: false, permalink: null, filePath: null, error: `spawn failed: ${err.message}` },
+      false,
+    );
   });
 
   child.on("close", () => {
-    finish({
-      ok: false,
-      permalink: null,
-      filePath: null,
-      error: `basic-memory mcp exited early: ${stderrTail.slice(0, 500) || "no stderr"}`,
-    });
+    finish(
+      {
+        ok: false,
+        permalink: null,
+        filePath: null,
+        error: `basic-memory mcp exited early: ${stderrTail.slice(0, 500) || "no stderr"}`,
+      },
+      false,
+    );
   });
 
   child.stderr.on("data", (chunk: Buffer) => {
@@ -143,12 +172,15 @@ function callTool(
   child.stdout.on("data", (chunk: Buffer) => {
     stdoutBytes += chunk.length;
     if (stdoutBytes > MAX_STDOUT_BYTES) {
-      finish({
-        ok: false,
-        permalink: null,
-        filePath: null,
-        error: "basic-memory mcp stdout exceeded 4 MiB",
-      });
+      finish(
+        {
+          ok: false,
+          permalink: null,
+          filePath: null,
+          error: "basic-memory mcp stdout exceeded 4 MiB",
+        },
+        false,
+      );
       return;
     }
     lineBuffer += chunk.toString("utf8");
@@ -267,10 +299,12 @@ function contentText(result: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
-// basic-memory 0.23 answers after the index update, not after the markdown
-// file lands. Killing the process at the answer leaves the file to the next
-// session's reconciliation, so poll for it before shutting down. A timeout is
-// not an error: the next session flushes the pending note.
+// basic-memory 0.23 answers `write_note` after the index update, not after the
+// markdown file lands; the file is flushed about half a second later by a
+// background task of the running process. The caller keeps the child alive
+// while this polls, so the wait usually ends after one interval. If the file
+// is still missing at the deadline, the write still counts as done: the next
+// `basic-memory` session reconciles the pending note from the index.
 async function waitForFile(path: string): Promise<void> {
   const deadline = Date.now() + FILE_WAIT_TIMEOUT_MS;
   while (Date.now() < deadline) {

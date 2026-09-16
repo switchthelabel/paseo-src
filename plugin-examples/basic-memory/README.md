@@ -99,10 +99,13 @@ arguments — `title`, `content`, `directory`, `tags`, `output_format: "json"`
 — and kills the process after the note file appears in the vault.
 
 Basic Memory 0.23 answers `write_note` after its index update, not after the
-Markdown file lands. The plugin therefore polls the vault for the file before
-it shuts the process down (8 s limit). If the file is still missing, the
-write still counts as done: the next `basic-memory` session reconciles the
-pending note from the index.
+Markdown file lands. The file is flushed about half a second later by a
+background task of the still-running process, so the plugin keeps the child
+alive while it polls the vault for the file (8 s limit) and only then shuts
+the process down. Killing the child at the answer instead cancels the flush;
+the note then stays pending until the next `basic-memory` session reconciles
+it from the index. If the file is still missing at the deadline, the write
+still counts as done for the same reason.
 
 ## Limits
 
