@@ -2,7 +2,7 @@ import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
 export const basicMemoryStatus = defineRpc({
-  name: "basicMemory.status",
+  name: "basic-memory.status",
   input: z.object({}),
   output: z.object({
     config: z.record(z.string(), z.unknown()),
@@ -14,7 +14,7 @@ export const basicMemoryStatus = defineRpc({
 });
 
 export const basicMemoryWrite = defineRpc({
-  name: "basicMemory.write",
+  name: "basic-memory.write",
   input: z.object({
     title: z.string().min(1),
     content: z.string(),

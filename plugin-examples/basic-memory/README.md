@@ -84,6 +84,9 @@ paseo plugin ls basic-memory          # expect: running
 paseo plugin logs basic-memory        # expect: "[basic-memory] plugin ready"
 ```
 
+RPC method names are `basic-memory.status` and `basic-memory.write` (plugin
+RPC names are lowercase; camelCase is rejected at registration).
+
 No daemon restart. The plugin runs in its own subprocess; running agents are
 not touched.
 
