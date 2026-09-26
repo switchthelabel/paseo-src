@@ -1,3 +1,29 @@
+<!-- skill-index:begin -->
+<!-- Managed by the Paseo skill-index plugin. Do not edit this block by hand. -->
+<!-- Settings: ~/.paseo/skill-index.json -->
+## Agent skills on this machine
+
+A skill is an instruction file. Before you start a task that matches a skill below, read its SKILL.md with your file-read tool and follow it. When your client supports slash commands, the user can also type `/<skill-name>` to invoke a skill directly.
+
+- **paseo**: Paseo reference for managing projects, workspaces, workspace scripts, agents, schedules, and heartbeats.
+  Read: `/home/ubuntu/.agents/skills/paseo/SKILL.md`
+- **paseo-advisor**: Spin up a single agent as an advisor — second opinion on the current task. Use when the user says "advisor", "second opinion", "what does X think", or wants an outside take without delegating the work itself.
+  Read: `/home/ubuntu/.agents/skills/paseo-advisor/SKILL.md`
+- **paseo-committee**: Form a committee of two high-reasoning agents to step back, do root cause analysis, and produce a plan. Use when stuck, looping, tunnel-visioning, or facing a hard planning problem.
+  Read: `/home/ubuntu/.agents/skills/paseo-committee/SKILL.md`
+- **paseo-docs**: Paseo's full docs are checked out on this machine. Read Paseo docs from disk instead of fetching paseo.sh — contributor docs (architecture, design, testing) and user docs (setup, providers, CLI, plugins) for any Paseo task.
+  Read: `/home/ubuntu/.agents/skills/paseo-docs/SKILL.md`
+- **paseo-handoff**: Hand off the current task to another agent with full context. Use when the user says "handoff", "hand off", "hand this to", or wants to pass work to another agent.
+  Read: `/home/ubuntu/.agents/skills/paseo-handoff/SKILL.md`
+- **paseo-help**: Answer questions about the Paseo product and app, including setup, configuration, connectivity, providers, workspaces, updates, logs, and troubleshooting. Use when a user inside Paseo asks how Paseo works, how to configure it, or why somet…
+  Read: `/home/ubuntu/.agents/skills/paseo-help/SKILL.md`
+- **paseo-memory**: Shared long-term memory on this daemon. Search it at task start; write a checkpoint before you finish.
+  Read: `/home/ubuntu/.agents/skills/paseo-memory/SKILL.md`
+- **paseo-plugin**: Build and manage trusted local Paseo plugins. Use when the user asks to create, edit, install, reload, enable, disable, remove, or troubleshoot a Paseo plugin; add lifecycle hooks; transform agent configuration, environment, MCP servers, o…
+  Read: `/home/ubuntu/.agents/skills/paseo-plugin/SKILL.md`
+
+<!-- skill-index:end -->
+
 # CLAUDE.md
 
 Paseo is a mobile app for monitoring and controlling your local AI coding agents from anywhere. Your dev environment, in your pocket. Connects directly to your actual development environment — your code stays on your machine.
