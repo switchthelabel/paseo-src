@@ -1,6 +1,6 @@
 # Conversation Search Design
 
-Status: Draft for review, revision 3
+Status: Draft for review, revision 4
 
 ## Purpose
 
@@ -154,8 +154,12 @@ Each request runs one Typesense query with `group_by: agentId`. The response is 
 
 | Mode | Query | When |
 | --- | --- | --- |
-| `keyword` | Lexical on `text`, typo tolerance on, quoted phrases exact. | Semantic search is off, or the query is quoted. |
-| `hybrid` | Lexical and vector, fused by rank. | Default when semantic search is on. |
+| `keyword` | Lexical on `text`, typo tolerance on, quoted phrases exact. | Default. |
+| `hybrid` | Lexical and vector, fused by rank. | The user turns on **Search by meaning**. |
+
+**Search by meaning** is an explicit control next to the search field. The app does not choose the mode for the user. The control is disabled, with a reason, when semantic search is off on the daemon. The app remembers the last setting.
+
+Archived sessions are included by default. A filter excludes them.
 
 Ranking rules:
 
@@ -227,8 +231,8 @@ conversation.search.configure.response
 
 The first release targets one deployment: the daemon and Typesense run on the same Linux server.
 
-- The operator installs Typesense from the official DEB package or the official Docker image, pinned to one version. systemd or Docker supervises it. The daemon does not download, start, or stop Typesense.
-- Typesense listens on `127.0.0.1` only. Its data directory is outside `$PASEO_HOME`, owned by the Typesense service user.
+- The operator runs the official Typesense Docker image, pinned to one version tag, with a restart policy and a named volume for data. Docker supervises it. The daemon does not download, start, or stop Typesense.
+- The container publishes its port on `127.0.0.1` only. Its data volume is outside `$PASEO_HOME`.
 - The daemon reads two settings: `conversationSearch.typesense.url` and `conversationSearch.typesense.apiKeyFile`. The key is in a file with mode `0600`, not in `config.json`, so config backups do not copy it.
 - A daemon without these settings does not advertise the feature.
 - The daemon creates its collection with a name that includes the daemon id and `schemaVersion`. A schema change builds a new collection and drops the old one after backfill.
@@ -302,7 +306,4 @@ Follow `docs/testing.md`: real dependencies over mocks. Add to existing suites.
 
 ## Review Questions
 
-1. Should the operator install Typesense from the DEB package under systemd, or run the Docker image?
-2. Should archived sessions appear by default, or behind a filter?
-3. Should provider child transcripts be indexed in a later release?
-4. Is one "Search conversations" field with automatic hybrid mode correct, or does the user need an explicit "Search by meaning" control?
+1. Should provider child transcripts be indexed in a later release?
